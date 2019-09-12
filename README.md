@@ -34,7 +34,8 @@ Off course, try to get the iPad at the end !
 ---
 
 1. Launch the app, you get an empty space and just add to click on + button to define Event
-2. ![Target](./doc/start.jpeg =300x)
+2. ![Target](./doc/start.jpeg | width=300)
+2. <img src="./doc/start.jpeg" width="300">
 3. Select image or video you have already uploaded in the File section dedicated to this app
 4. ![Target](./doc/create_event.jpeg)
 5. ![Target](./doc/create_event_ok.jpeg)
