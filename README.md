@@ -34,8 +34,13 @@ Off course, try to get the iPad at the end !
 ---
 
 1. Launch the app, you get an empty space and just add to click on + button to define Event
-2. ![Target](./doc/start.jpeg)
-3. 
+2. ![Target](./doc/start.jpeg =300x)
+3. Select image or video you have already uploaded in the File section dedicated to this app
+4. ![Target](./doc/create_event.jpeg)
+5. ![Target](./doc/create_event_ok.jpeg)
+6. Give Event name and description and you're ok to go throught Guided Access setting
+7. Go to the General Settings of the iPad, then activate the Guided access, define a password to unlock guided access
+8.  ![Target](./doc/guided_access_setting.jpeg)
 
 <br>
 
