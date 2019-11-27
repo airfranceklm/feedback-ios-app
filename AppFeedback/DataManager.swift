@@ -76,7 +76,7 @@ class DataManager {
     
     func update(projectId: UInt, name: String, description: String, path: String, isVideo: Bool) {
         queue.sync {
-            guard let index = projects.index(where: {$0.id == projectId}) else {
+            guard let index = projects.firstIndex(where: {$0.id == projectId}) else {
                 print("ERROR - Failed to update project - Not found")
                 return
             }
@@ -94,7 +94,7 @@ class DataManager {
     
     func addFeedback(projectId: UInt, comment: String, mood: Mood) {
         queue.sync {
-            guard let index = projects.index(where: {$0.id == projectId}) else {
+            guard let index = projects.firstIndex(where: {$0.id == projectId}) else {
                 print("ERROR - Failed to add feedback - Project not found")
                 return
             }
@@ -117,7 +117,7 @@ class DataManager {
     
     func delete(project: XProject) {
         queue.sync {
-            guard let index = projects.index(where: {$0.id == project.id}) else {
+            guard let index = projects.firstIndex(where: {$0.id == project.id}) else {
                 print("ERROR - Failed to delete project - Not found")
                 return
             }
@@ -133,7 +133,7 @@ class DataManager {
     
     func deleteFeedbacks(project: XProject) {
         queue.sync {
-            guard let index = projects.index(where: {$0.id == project.id}) else {
+            guard let index = projects.firstIndex(where: {$0.id == project.id}) else {
                 print("ERROR - Failed to delete project - Not found")
                 return
             }

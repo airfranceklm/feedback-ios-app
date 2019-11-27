@@ -1,0 +1,16 @@
+PODS:
+  - BleMesh (1.0.0)
+
+DEPENDENCIES:
+  - BleMesh
+
+SPEC REPOS:
+  https://github.com/airfranceklm/pod-spec:
+    - BleMesh
+
+SPEC CHECKSUMS:
+  BleMesh: 76ff47083a49fe70fa3c64eb44c6c34bd0639c23
+
+PODFILE CHECKSUM: 9c38913838fdfda27b6efbecf4369bb3cb5b55a8
+
+COCOAPODS: 1.8.4
