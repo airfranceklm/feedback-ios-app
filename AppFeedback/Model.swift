@@ -31,3 +31,9 @@ struct XProject: Codable {
     let moods: [Mood: UInt]
     let feedbacks: [XFeedback]
 }
+
+struct XSharableFeedback : Codable {
+    let projectName: String
+    let mood: Mood
+    let comment: String
+}

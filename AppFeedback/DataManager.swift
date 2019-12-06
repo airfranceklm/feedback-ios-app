@@ -9,8 +9,9 @@
 import UIKit
 import AVFoundation
 import MobileCoreServices
+import BleMesh
 
-class DataManager {
+class DataManager : NSObject, BleManagerDelegate {
     
     static let shared = DataManager()
     
@@ -21,13 +22,28 @@ class DataManager {
     private var nextId: UInt = 1
     private let queue : DispatchQueue = DispatchQueue(label: "com.airfrance.mobile.inhouse.AFKLFeedbackQueue")
     
-    private init() {
-        docUrl = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        contentsUrl = docUrl.appendingPathComponent("contents", isDirectory: true)
+    // BLE working vars
+    var sessionId: UInt64 = 7331
+    var terminalId: BleTerminalId = UInt64(UUID().hashValue)
+    var bleItems: [BleItem] = []
+    var nextItemIndex: BleItemIndex = 0
+    var itemDatas = [UInt32: Data]()
+    var messages = [UInt64: [UInt32: XSharableFeedback]]()
+    
+    private override init() {
+        self.docUrl = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        self.contentsUrl = docUrl.appendingPathComponent("contents", isDirectory: true)
         let supportDirUrl = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        projectsUrl = supportDirUrl.appendingPathComponent("projects.json", isDirectory: false)
+        
+        self.projectsUrl = supportDirUrl.appendingPathComponent("projects.json", isDirectory: false)
         try? FileManager.default.createDirectory(at: supportDirUrl, withIntermediateDirectories: true, attributes: nil)
         try? FileManager.default.createDirectory(at: contentsUrl, withIntermediateDirectories: true, attributes: nil)
+        
+        super.init()
+        
+        BleManager.shared.delegate = self
+        BleManager.shared.start(session: sessionId, terminal: terminalId)
+        
         readProjects()
     }
     
@@ -92,7 +108,7 @@ class DataManager {
         }
     }
     
-    func addFeedback(projectId: UInt, comment: String, mood: Mood) {
+    func addFeedback(projectId: UInt, comment: String, mood: Mood, share: Bool = true) {
         queue.sync {
             guard let index = projects.firstIndex(where: {$0.id == projectId}) else {
                 print("ERROR - Failed to add feedback - Project not found")
@@ -108,11 +124,33 @@ class DataManager {
             projects[index] = newProject
             do {
                 try saveProjects()
+                if share {
+                    shareFeedback(projectName: newProject.name, comment: comment, mood: mood)
+                }
             } catch {
                 projects[index] = oldProject
                 print("ERROR - Failed to add feedback - \(error)")
             }
         }
+    }
+    
+    private func shareFeedback(projectName: String, comment: String, mood: Mood) {
+        print("DataManager->shareFeedback()")
+        
+        let encoder = JSONEncoder()
+        let sharableFeedback = XSharableFeedback(projectName: projectName, mood: mood, comment: comment)
+        
+        guard let itemData = try? encoder.encode(sharableFeedback) else {
+            print("ERROR: Enable to encode feedback in JSON format.")
+            return
+        }
+        let headerData = "Broadcast".data(using: .utf8) ?? Data()
+        let item = BleItem(terminalId: terminalId, itemIndex: nextItemIndex, previousIndexes: nil, size: UInt32(itemData.count), headerData: headerData)
+        
+        itemDatas[nextItemIndex] = itemData
+        nextItemIndex = nextItemIndex + 1
+        
+        BleManager.shared.broadcast(item: item)
     }
     
     func delete(project: XProject) {
@@ -252,5 +290,44 @@ class DataManager {
             print("ERROR - Failed to export - \(error)")
             return false
         }
+    }
+
+    // MARK: BleManagerDelegate
+    
+    func bleManagerItemSliceFor(terminalId: BleTerminalId, index: BleItemIndex, offset: UInt32, length: UInt32) -> Data? {
+        print("BleManagerDelegate->bleManagerItemSliceFor(terminalId:\(terminalId), index:\(index), offset:\(offset), length:\(length))")
+        guard let itemData = itemDatas[index] else {
+            print("ERROR: item data is nil for index:\(index)")
+            return nil
+        }
+        guard offset < itemData.count else {
+            print("ERROR: offset:(\(offset)) < itemData.count:(\(itemData.count))")
+            return nil
+        }
+        return itemData[offset..<min(UInt32(itemData.count), UInt32(offset + length))]
+    }
+    
+    func bleManagerDidReceive(item: BleItem, data: Data) {
+        print("BleManagerDelegate->bleManagerDidReceive()")
+        // get the XSharableFeedback from the BLE.
+        let decoder = JSONDecoder()
+        guard let message = try? decoder.decode(XSharableFeedback.self, from: data) else {
+            print("ERROR, Malformed BLE message.")
+            return
+        }
+        // save the message.
+        var messagesFromTerminal = messages[item.terminalId]
+        if messagesFromTerminal == nil {
+            messagesFromTerminal = [UInt32: XSharableFeedback]()
+            self.messages[item.terminalId] = messagesFromTerminal
+        }
+        self.messages[item.terminalId]?[item.itemIndex] = message
+        // get the associated project.
+        guard let index = projects.firstIndex(where: {$0.name == message.projectName}) else {
+            print("ERROR - Failed to add feedback - Project not found")
+            return
+        }
+        // add the feedback to the project.
+        addFeedback(projectId: projects[index].id, comment: message.comment, mood: message.mood, share: false)
     }
 }
